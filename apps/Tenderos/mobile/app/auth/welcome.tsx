@@ -41,6 +41,7 @@ export default function WelcomeScreen() {
           {/* Email */}
           <Pressable
             className="rounded-full flex-row justify-between items-center px-6 py-4 border border-gray-200 bg-[#0000002a]"
+            onPress={() => router.push("/auth/enter-email")}
           >
             <MaterialIcons name="email" size={22} color="black" />
             <Text className="text-base uppercase tracking-wide text-black">

@@ -1,0 +1,7 @@
+export { enterEmailMessages } from "./enter-email.messages"
+export { enterOtpMessages } from "./enter-otp.messages"
+export { personNameMessages } from "./person-name.messages"
+export { storeNameMessages } from "./store-name.messages"
+export { businessLocationMessages } from "./business-location.messages"
+export { storePhotosMessages } from "./store-photos.messages"
+export { paymentMethodMessages } from "./payment-method.messages"

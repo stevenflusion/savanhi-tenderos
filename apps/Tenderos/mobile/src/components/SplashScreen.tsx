@@ -26,7 +26,7 @@ function SplashScreen({ onAnimationFinish }: SplashScreenProps) {
       <View style={styles.lottieWrapper}>
         <LottieView
           ref={animationRef}
-          source={require("../../assets/lotties/LottieSplashScreen.json")}
+          source={require("../../assets/lotties/Splash_Screen.json")}
           autoPlay
           loop={false}
           resizeMode="cover"

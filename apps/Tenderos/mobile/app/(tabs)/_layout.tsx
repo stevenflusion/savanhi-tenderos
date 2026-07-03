@@ -16,7 +16,7 @@ export default function TabsLayout() {
   const { isLoggedIn, isReady } = useAuth();
   const navBarScreenOptions = useNavBarScreenOptions();
   if (!isReady) return null;
-  if (!isLoggedIn) return <Redirect href="/auth/login" />;
+  if (!isLoggedIn) return <Redirect href="/auth/welcome" />;
 
   return (
     <Tabs initialRouteName="index" screenOptions={navBarScreenOptions}>

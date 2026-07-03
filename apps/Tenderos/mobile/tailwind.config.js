@@ -6,5 +6,13 @@ module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
     "./src/**/*.{js,jsx,ts,tsx}"
-  ]
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        poppins: ["Poppins"],
+        sans: ["Poppins"],
+      },
+    },
+  },
 };

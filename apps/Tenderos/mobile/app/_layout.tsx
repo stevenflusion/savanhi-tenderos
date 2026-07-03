@@ -3,9 +3,14 @@ import { AuthProvider } from "../src/components/AuthProvider"
 import { useFonts } from "expo-font"
 import "../global.css"
 import { useCallback, useEffect, useState } from "react"
+import { Text } from "react-native"
 import SplashScreen from "../src/components/SplashScreen"
 
 const FONT_TIMEOUT_MS = 10_000
+
+// Global font: every <Text> in the app defaults to Poppins.
+// This is the standard RN pattern — fontFamily does NOT cascade from View parents.
+Text.defaultProps = { ...Text.defaultProps, style: { fontFamily: "Poppins" } }
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false)
@@ -13,7 +18,7 @@ export default function RootLayout() {
 
   // Load fonts in parallel with the Lottie animation
   const [fontsLoaded, fontsError] = useFonts({
-    Monserrat: require("../assets/fonts/Montserrat.ttf"),
+    Poppins: require("../assets/fonts/Poppins.ttf"),
   })
 
   // Safety timeout: after 10s show app even if fonts never loaded
