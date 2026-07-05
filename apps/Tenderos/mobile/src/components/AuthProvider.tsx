@@ -21,7 +21,11 @@ type User = AuthUser & {
   bankAccountType?: "ahorro" | "corriente";
 };
 
-type Session = Pick<AuthSession, "accessToken" | "refreshToken">;
+type Session = {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: number | null;
+};
 
 type StoredSession = {
   user: User;
@@ -56,6 +60,7 @@ type AuthContextType = {
     email: string,
     code: string,
   ) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
+  completeRegistration: () => Promise<{ success: boolean; error?: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -89,7 +94,30 @@ async function loadSession(): Promise<StoredSession | null> {
   }
 }
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const SESSION_REFRESH_MARGIN_MS = 60_000;
+
+function toSession(session: AuthSession): Session {
+  return {
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    expiresAt: session.expiresIn ? Date.now() + session.expiresIn * 1000 : null,
+  };
+}
+
+async function refreshWithToken(refreshToken: string): Promise<Session | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!response.ok) return null;
+    const data = await parseJson(response);
+    return toSession(data.session);
+  } catch {
+    return null;
+  }
+}
 
 type AuthProviderProps = {
   children: ReactNode;
@@ -101,14 +129,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    loadSession()
-      .then((stored) => {
-        if (!stored) return;
+    (async () => {
+      const stored = await loadSession();
+      if (!stored) {
+        setIsReady(true);
+        return;
+      }
+
+      const expiresSoon =
+        !stored.session.expiresAt ||
+        stored.session.expiresAt - Date.now() < SESSION_REFRESH_MARGIN_MS;
+
+      if (!expiresSoon) {
         setUser(stored.user);
         setSession(stored.session);
-      })
-      .finally(() => setIsReady(true));
+        setIsReady(true);
+        return;
+      }
+
+      const refreshed = stored.session.refreshToken
+        ? await refreshWithToken(stored.session.refreshToken)
+        : null;
+
+      if (refreshed) {
+        setUser(stored.user);
+        setSession(refreshed);
+        await persistSession({ user: stored.user, session: refreshed });
+      } else {
+        await persistSession(null);
+      }
+      setIsReady(true);
+    })();
   }, []);
+
+  const authorizedFetch = async (path: string, init: RequestInit = {}) => {
+    if (!session) throw new Error("No hay sesión activa.");
+
+    const buildInit = (accessToken: string): RequestInit => ({
+      ...init,
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${accessToken}` },
+    });
+
+    let response = await fetch(`${API_BASE_URL}${path}`, buildInit(session.accessToken));
+
+    if (response.status === 401 && session.refreshToken) {
+      const refreshed = await refreshWithToken(session.refreshToken);
+      if (refreshed) {
+        setSession(refreshed);
+        if (user) await persistSession({ user, session: refreshed });
+        response = await fetch(`${API_BASE_URL}${path}`, buildInit(refreshed.accessToken));
+      } else {
+        setUser(null);
+        setSession(null);
+        await persistSession(null);
+      }
+    }
+
+    return response;
+  };
 
   const login = async (email: string, password: string) => {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -121,10 +199,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!response.ok) return false;
 
     const nextUser: User = data.user;
-    const nextSession: Session = {
-      accessToken: data.session.accessToken,
-      refreshToken: data.session.refreshToken,
-    };
+    const nextSession = toSession(data.session);
 
     setUser(nextUser);
     setSession(nextSession);
@@ -148,10 +223,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!response.ok) return false;
 
     const nextUser: User = data.user;
-    const nextSession: Session = {
-      accessToken: data.session.accessToken ?? "",
-      refreshToken: data.session.refreshToken ?? null,
-    };
+    const nextSession = toSession(data.session);
 
     setUser(nextUser);
     setSession(nextSession);
@@ -160,7 +232,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const saveProfile = async (data: { name: string; storeName: string }) => {
-    await delay(1000);
     setUser((prev) =>
       prev ? { ...prev, fullName: data.name, storeName: data.storeName } : null,
     );
@@ -168,7 +239,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const savePhotos = async (uris: string[]) => {
-    await delay(800);
     setUser((prev) => (prev ? { ...prev, photos: uris } : null));
     return { success: true };
   };
@@ -179,7 +249,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     bankAccountNumber?: string;
     bankAccountType?: string;
   }) => {
-    await delay(800);
     setUser((prev) =>
       prev
         ? {
@@ -199,10 +268,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async () => {
     if (session) {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
+      await authorizedFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
     }
 
     setUser(null);
@@ -210,26 +276,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await persistSession(null);
   };
 
-  const requestOTP = async (_email: string) => {
-    await delay(1500);
-    return { success: true };
+  const requestOTP = async (email: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const data = await parseJson(response);
+        return { success: false, error: data.error ?? "No se pudo enviar el código." };
+      }
+
+      return { success: true };
+    } catch {
+      return { success: false, error: "No se pudo conectar con el servidor." };
+    }
   };
 
   const verifyOTP = async (email: string, code: string) => {
-    await delay(1500);
-    if (code === "123456") {
-      // Set the user with the email so the profile screens can work
-      setUser({
-        id: `mock-${Date.now()}`,
-        fullName: "",
-        email,
-        role: "tendero",
-        active: true,
-        storeName: "",
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token: code }),
       });
-      return { success: true, isNewUser: true };
+
+      const data = await parseJson(response);
+      if (!response.ok) {
+        return { success: false, error: data.error ?? "Código inválido" };
+      }
+
+      const nextUser: User = data.user;
+      const nextSession = toSession(data.session);
+
+      setUser(nextUser);
+      setSession(nextSession);
+      await persistSession({ user: nextUser, session: nextSession });
+      return { success: true, isNewUser: Boolean(data.isNewUser) };
+    } catch {
+      return { success: false, error: "No se pudo conectar con el servidor." };
     }
-    return { success: false, error: "Código PIN incorrecto" };
   };
 
   const saveLocation = async (data: {
@@ -237,9 +325,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
     latitude: number;
     longitude: number;
   }) => {
-    await delay(800);
     setUser((prev) => (prev ? { ...prev, ...data } : null));
     return { success: true };
+  };
+
+  const completeRegistration = async () => {
+    if (!user || !session) {
+      return { success: false, error: "Sesión no encontrada." };
+    }
+
+    try {
+      const jsonHeaders = { "Content-Type": "application/json" };
+
+      const profileResponse = await authorizedFetch("/auth/me", {
+        method: "PATCH",
+        headers: jsonHeaders,
+        body: JSON.stringify({ fullName: user.fullName }),
+      });
+      const profileData = await parseJson(profileResponse);
+      if (!profileResponse.ok) {
+        return { success: false, error: profileData.error ?? "No se pudo guardar el perfil." };
+      }
+
+      const storeResponse = await authorizedFetch("/api/v1/tenderos/stores", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          name: user.storeName,
+          address: user.address,
+          latitude: user.latitude,
+          longitude: user.longitude,
+          paymentMethod: user.paymentMethod,
+          bankAccountName: user.bankAccountName,
+          bankAccountNumber: user.bankAccountNumber,
+          bankAccountType: user.bankAccountType,
+        }),
+      });
+      const storeData = await parseJson(storeResponse);
+      if (!storeResponse.ok) {
+        return { success: false, error: storeData.error ?? "No se pudo crear la tienda." };
+      }
+
+      setUser((prev) => (prev ? { ...prev, fullName: profileData.user.fullName } : prev));
+      return { success: true };
+    } catch {
+      return { success: false, error: "No se pudo conectar con el servidor." };
+    }
   };
 
   const value = useMemo(
@@ -255,9 +386,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       saveLocation,
       requestOTP,
       verifyOTP,
+      completeRegistration,
       logout,
     }),
-    [user, isReady],
+    [user, session, isReady],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
