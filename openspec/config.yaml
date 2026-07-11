@@ -6,6 +6,7 @@ context: |
   Focus: apps/Tenderos/mobile — Expo SDK 54, React Native 0.81.5, NativeWind v4, TypeScript 5.9.
   Other apps: Tenderos/web (Next.js 14), Tenderos/docs (Next.js 14), Web/backend (Express.js), Web/web-enterprise (Next.js 14).
   Shared packages: ui, tailwind-config, typescript-config, eslint-config (ESLint v9).
+  Per-app openspec: web-enterprise initialized 2026-06-29 at apps/Web/web-enterprise/openspec/.
 
 rules:
   proposal:
