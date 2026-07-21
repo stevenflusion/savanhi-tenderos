@@ -5,9 +5,9 @@ import type { BackendEnv } from "./types/env.js";
 
 function loadEnvFiles(startDir = process.cwd()): void {
   const envFiles: string[] = [];
-  const currentEnv = { ...process.env };
   let currentDir = startDir;
 
+  // Walk UP from cwd to root, collecting .env files
   while (true) {
     const envFile = join(currentDir, ".env");
     if (existsSync(envFile)) envFiles.push(envFile);
@@ -17,11 +17,10 @@ function loadEnvFiles(startDir = process.cwd()): void {
     currentDir = parentDir;
   }
 
-  for (const envFile of envFiles) {
+  // Load from ROOT down to cwd, so cwd's .env loads LAST and wins
+  for (const envFile of envFiles.reverse()) {
     dotenv.config({ path: envFile, override: true });
   }
-
-  Object.assign(process.env, currentEnv);
 }
 
 loadEnvFiles();

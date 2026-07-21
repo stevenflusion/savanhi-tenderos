@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthRole, AuthSession, AuthUser } from "@repo/api-contracts/auth";
+import type { AuthResponse, AuthRole, AuthSession, AuthUser, OtpVerifyResponse } from "@repo/api-contracts/auth";
 import type { User } from "@supabase/supabase-js";
 import { AppError } from "../errors.js";
 import { normalizeRole } from "../roles.js";
@@ -96,6 +96,50 @@ export function createSupabaseAuthService(
         user,
         session: buildSessionPayload(data.session),
       };
+    },
+
+    async requestOtp(email: string): Promise<void> {
+      const { error } = await db.anon.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
+      });
+      if (error) throw new AppError(error.message, error.status ?? 400, error);
+    },
+
+    async verifyOtp({
+      email,
+      token,
+      role,
+    }: {
+      email: string;
+      token: string;
+      role?: AuthRole;
+    }): Promise<OtpVerifyResponse> {
+      const { data, error } = await db.anon.auth.verifyOtp({ email, token, type: "email" });
+      if (error) throw new AppError(error.message, error.status ?? 401, error);
+      if (!data.user) throw new AppError("Unable to read authenticated user.", 401);
+
+      const normalizedRole = normalizeRole(role, defaultRegistrationRole);
+      const existingProfile = await users.findById(data.user.id);
+      const isNewUser = !existingProfile;
+
+      const user = await users.ensure(existingProfile ?? buildProfileFromAuthUser(data.user, normalizedRole));
+
+      if (isNewUser) {
+        await authLogs?.recordRegister({ userId: user.id, email: user.email });
+      } else {
+        await authLogs?.recordLogin({ userId: user.id, email: user.email });
+      }
+
+      return {
+        user,
+        session: buildSessionPayload(data.session),
+        isNewUser,
+      };
+    },
+
+    async updateProfile(userId: string, payload: { fullName: string }): Promise<AuthUser> {
+      return users.updateProfile(userId, payload);
     },
 
     async refreshSession(refreshToken: string): Promise<AuthSession> {

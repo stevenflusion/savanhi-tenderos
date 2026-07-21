@@ -13,6 +13,12 @@ const idParamsSchema = z.object({ id: z.string().uuid() });
 const storeSchema = z.object({
   name: z.string().min(1),
   address: z.string().nullable().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  paymentMethod: z.enum(["efectivo", "pichincha"]).nullable().optional(),
+  bankAccountName: z.string().nullable().optional(),
+  bankAccountNumber: z.string().nullable().optional(),
+  bankAccountType: z.enum(["ahorro", "corriente"]).nullable().optional(),
 });
 const productSchema = z.object({
   storeId: z.string().uuid().nullable().optional(),

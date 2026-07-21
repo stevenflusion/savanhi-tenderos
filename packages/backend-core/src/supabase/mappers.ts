@@ -45,6 +45,12 @@ export function mapStore(row: Tables["stores"]["Row"]): Store {
     ownerProfileId: row.owner_user_id,
     name: row.name,
     address: row.address,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    paymentMethod: row.payment_method,
+    bankAccountName: row.bank_account_name,
+    bankAccountNumber: row.bank_account_number,
+    bankAccountType: row.bank_account_type,
     active: row.active,
     createdAt: row.created_at,
   };

@@ -36,3 +36,20 @@ export type AuthResponse = {
   user: AuthUser;
   session: AuthSession;
 };
+
+export type OtpRequestRequest = {
+  email: string;
+};
+
+export type OtpVerifyRequest = {
+  email: string;
+  token: string;
+};
+
+export type OtpVerifyResponse = AuthResponse & {
+  isNewUser: boolean;
+};
+
+export type UpdateProfileRequest = {
+  fullName: string;
+};

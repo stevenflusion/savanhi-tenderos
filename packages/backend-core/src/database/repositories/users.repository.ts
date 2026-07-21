@@ -47,6 +47,18 @@ export function createUsersRepository(db: AppSupabaseClient) {
       return data.map(mapAdminUser);
     },
 
+    async updateProfile(id: string, payload: { fullName: string }): Promise<AuthUser> {
+      const { data, error } = await db
+        .from("users")
+        .update({ full_name: payload.fullName })
+        .eq("id", id)
+        .select(userSelect)
+        .single();
+
+      if (error) throw new AppError(error.message, 404, error);
+      return mapProfile(data);
+    },
+
     async updateStatus(id: string, payload: UserStatusRequest) {
       const { data, error } = await db
         .from("users")

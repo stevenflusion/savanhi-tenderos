@@ -11,6 +11,11 @@ El monorepo mantiene cuatro APIs separadas por dominio y un core compartido en T
 - `packages/backend-core`: Express, auth, Supabase, roles, errores, CORS, health checks y validacion compartida.
 - `packages/api-contracts`: tipos compartidos para web, mobile y backend.
 
+Nota:
+
+- `admin` ya es el rol de acceso completo del backend.
+- No existe un rol separado de `developer` en el modelo actual.
+
 ## Flujo de datos
 
 Web y mobile no se conectan directo a Supabase. Solo consumen APIs HTTP.
@@ -158,6 +163,26 @@ curl -X POST http://localhost:4300/auth/register \
   -H "Content-Type: application/json" \
   -d "{\"fullName\":\"Usuario Demo\",\"email\":\"usuario@savanhi.com\",\"password\":\"Password123!\",\"role\":\"tendero\"}"
 ```
+
+12. Crear un admin de desarrollo con acceso completo:
+
+```bash
+pnpm --filter @repo/backend-core bootstrap:dev-admin
+```
+
+Variables opcionales:
+
+```env
+DEV_ADMIN_EMAIL=dev.admin@savanhi.local
+DEV_ADMIN_PASSWORD=ChangeMe123!
+DEV_ADMIN_FULL_NAME=Developer Admin
+```
+
+Ese bootstrap:
+
+- crea el usuario en Supabase Auth si no existe
+- asegura el perfil en `public.users`
+- le asigna el rol `admin`
 
 ## Resultado de prueba local
 

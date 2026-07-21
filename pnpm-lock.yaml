@@ -206,6 +206,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@lottiefiles/dotlottie-react':
+        specifier: ^0.19.7
+        version: 0.19.7(react@19.1.0)
     devDependencies:
       prettier:
         specifier: ^3.7.4
@@ -402,7 +406,7 @@ importers:
         version: 3.0.9(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0)
       lottie-react-native:
         specifier: ^7.3.8
-        version: 7.3.8(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0)
+        version: 7.3.8(@lottiefiles/dotlottie-react@0.19.7(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0)
       nativewind:
         specifier: ^4.1.23
         version: 4.2.5(react-native-reanimated@4.1.7(react-native-worklets@0.5.1(@babel/core@7.29.7)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0))(react-native-safe-area-context@5.6.2(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0)(supports-color@5.5.0)(tailwindcss@3.4.19(tsx@4.22.4)(yaml@2.9.0))
@@ -1618,6 +1622,16 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@lottiefiles/dotlottie-react@0.19.7':
+    resolution: {integrity: sha512-uozfELOplVo0PwD2E3yy9IndpjKVa4oWErDWFos3cHaqwsUrRLlJNpRDM8aFsWdw5e3N3/GHbKcsGxSeytsPWg==}
+    engines: {node: '>=18.17.0', npm: '>=9.5.0'}
+    peerDependencies:
+      react: ^17 || ^18 || ^19
+
+  '@lottiefiles/dotlottie-web@0.76.0':
+    resolution: {integrity: sha512-uWJ86UJM6hjN4MY2aGSyyFcRQEAM4B9qDCnb/336dHab1zE6nyOF45b90t8xesZPwNtP/2moNGMrMQ1UJW6+lQ==}
+    engines: {node: '>=18.17.0', npm: '>=9.5.0'}
 
   '@next/env@14.2.3':
     resolution: {integrity: sha512-W7fd7IbkfmeeY2gXrzJYDx8D2lWKbVoTIj1o1ScPHNzvp30s1AuoEFSdr39bC5sjxJaxTtq3OTCZboNp0lNWHA==}
@@ -6741,6 +6755,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@lottiefiles/dotlottie-react@0.19.7(react@19.1.0)':
+    dependencies:
+      '@lottiefiles/dotlottie-web': 0.76.0
+      react: 19.1.0
+
+  '@lottiefiles/dotlottie-web@0.76.0': {}
+
   '@next/env@14.2.3': {}
 
   '@next/eslint-plugin-next@16.2.9':
@@ -9573,10 +9594,12 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
-  lottie-react-native@7.3.8(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0):
+  lottie-react-native@7.3.8(@lottiefiles/dotlottie-react@0.19.7(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0))(react@19.1.0):
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.1.0)(supports-color@5.5.0)
+    optionalDependencies:
+      '@lottiefiles/dotlottie-react': 0.19.7(react@19.1.0)
 
   lru-cache@10.4.3: {}
 

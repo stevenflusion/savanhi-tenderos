@@ -1,8 +1,17 @@
+export type StorePaymentMethod = "efectivo" | "pichincha";
+export type StoreBankAccountType = "ahorro" | "corriente";
+
 export type Store = {
   id: string;
   ownerProfileId: string;
   name: string;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  paymentMethod: StorePaymentMethod | null;
+  bankAccountName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountType: StoreBankAccountType | null;
   active: boolean;
   createdAt: string | null;
 };
@@ -10,6 +19,12 @@ export type Store = {
 export type StoreRequest = {
   name: string;
   address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  paymentMethod?: StorePaymentMethod | null;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountType?: StoreBankAccountType | null;
 };
 
 export type Product = {

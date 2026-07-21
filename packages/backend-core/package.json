@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check-types": "tsc -p tsconfig.json --noEmit"
+    "check-types": "tsc -p tsconfig.json --noEmit",
+    "bootstrap:dev-admin": "tsx src/scripts/bootstrap-dev-admin.ts"
   },
   "dependencies": {
     "@repo/api-contracts": "workspace:*",

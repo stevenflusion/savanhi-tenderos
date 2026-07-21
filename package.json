@@ -17,5 +17,8 @@
   "packageManager": "pnpm@11.7.0",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.19.7"
   }
 }
