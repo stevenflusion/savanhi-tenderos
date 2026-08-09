@@ -8,9 +8,13 @@ import { useRouter } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { useAuth } from "@/src/components/AuthProvider";
 
 export default function AccountCreatedScreen() {
   const router = useRouter();
+  const { completeRegistration } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // ── Fade + slide animation ──
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -33,8 +37,18 @@ export default function AccountCreatedScreen() {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const handleStart = () => {
-    router.replace("/(tabs)");
+  const handleStart = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError("");
+    const result = await completeRegistration();
+    setLoading(false);
+
+    if (result.success) {
+      router.replace("/(tabs)");
+    } else {
+      setError(result.error ?? "No se pudo completar el registro.");
+    }
   };
 
   const handleBack = () => {
@@ -118,11 +132,17 @@ export default function AccountCreatedScreen() {
 
       {/* ── Bottom CTA ── */}
       <View className="px-6 pb-4">
+        {error ? (
+          <Text className="mb-3 text-center text-sm text-red-600">{error}</Text>
+        ) : null}
         <Pressable
           onPress={handleStart}
+          disabled={loading}
           className="h-16 items-center justify-center rounded-full bg-black"
         >
-          <Text className="text-lg text-white">Comenzar</Text>
+          <Text className="text-lg text-white">
+            {loading ? "Creando tu cuenta..." : "Comenzar"}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>

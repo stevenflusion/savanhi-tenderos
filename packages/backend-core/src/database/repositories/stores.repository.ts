@@ -29,6 +29,12 @@ export function createStoresRepository(db: AppSupabaseClient) {
           owner_user_id: ownerProfileId,
           name: payload.name,
           address: payload.address ?? null,
+          latitude: payload.latitude ?? null,
+          longitude: payload.longitude ?? null,
+          payment_method: payload.paymentMethod ?? null,
+          bank_account_name: payload.bankAccountName ?? null,
+          bank_account_number: payload.bankAccountNumber ?? null,
+          bank_account_type: payload.bankAccountType ?? null,
         })
         .select()
         .single();

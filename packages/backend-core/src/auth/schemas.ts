@@ -16,3 +16,16 @@ export const registerSchema = z.object({
 export const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
+
+export const otpRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+export const otpVerifySchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(1),
+});
+
+export const updateProfileSchema = z.object({
+  fullName: z.string().min(1),
+});

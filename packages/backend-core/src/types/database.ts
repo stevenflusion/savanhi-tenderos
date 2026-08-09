@@ -1,6 +1,7 @@
 import type { AuthRole } from "@repo/api-contracts/auth";
 import type { DeliveryStatus } from "@repo/api-contracts/deliveries";
 import type { OrderStatus } from "@repo/api-contracts/orders";
+import type { StoreBankAccountType, StorePaymentMethod } from "@repo/api-contracts/products";
 
 export type Database = {
   public: {
@@ -92,6 +93,12 @@ export type Database = {
           owner_user_id: string;
           name: string;
           address: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          payment_method: StorePaymentMethod | null;
+          bank_account_name: string | null;
+          bank_account_number: string | null;
+          bank_account_type: StoreBankAccountType | null;
           active: boolean;
           created_at: string | null;
         };
@@ -100,6 +107,12 @@ export type Database = {
           owner_user_id: string;
           name: string;
           address?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          payment_method?: StorePaymentMethod | null;
+          bank_account_name?: string | null;
+          bank_account_number?: string | null;
+          bank_account_type?: StoreBankAccountType | null;
           active?: boolean;
           created_at?: string;
         };
