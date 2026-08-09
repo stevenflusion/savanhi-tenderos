@@ -1,11 +1,12 @@
 import type { LoginCredentials, LoginValidationErrors } from "../../domain/auth/credentials";
 import { validateLoginCredentials } from "../../domain/auth/validation";
-import { login as loginRequest, saveSession } from "./auth-api";
+import { signInWithSavanhiId } from "./supabase-auth-service";
 
 type LoginSuccess = {
   ok: true;
   userName: string;
   nextRoute: string;
+  role: "admin" | "marca";
 };
 
 type LoginFailure = {
@@ -16,13 +17,17 @@ type LoginFailure = {
 
 export type LoginResult = LoginSuccess | LoginFailure;
 
-function hasValidationErrors(errors: LoginValidationErrors): boolean {
-  return Boolean(errors.email || errors.password);
+const ROUTE_MAP: Record<"admin" | "marca", string> = {
+  admin: "/admin/dashboard",
+  marca: "/brand/dashboard",
+};
+
+function getNextRoute(role: "admin" | "marca"): string {
+  return ROUTE_MAP[role] ?? "/unauthorized";
 }
 
-function routeByRole(role: string): string {
-  if (role === "admin" || role === "marca") return "/dashboard";
-  return "/dashboard";
+function hasValidationErrors(errors: LoginValidationErrors): boolean {
+  return Boolean(errors.savanhiId || errors.password);
 }
 
 export async function loginUseCase(credentials: LoginCredentials): Promise<LoginResult> {
@@ -33,19 +38,22 @@ export async function loginUseCase(credentials: LoginCredentials): Promise<Login
   }
 
   try {
-    const response = await loginRequest(credentials.email, credentials.password);
-    saveSession(response);
+    const { user } = await signInWithSavanhiId(
+      credentials.savanhiId,
+      credentials.password,
+    );
 
     return {
       ok: true,
-      userName: response.user.fullName,
-      nextRoute: routeByRole(response.user.role),
+      userName: user.displayName,
+      role: user.role as "admin" | "marca",
+      nextRoute: getNextRoute(user.role as "admin" | "marca"),
     };
   } catch (error) {
     return {
       ok: false,
-      errors: { password: "Credenciales invalidas." },
-      message: error instanceof Error ? error.message : "No fue posible iniciar sesion.",
+      errors: {},
+      message: "Credenciales inválidas",
     };
   }
 }

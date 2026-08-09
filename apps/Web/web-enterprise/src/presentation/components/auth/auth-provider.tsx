@@ -1,16 +1,24 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/router";
-import { clearSession, loadSession, me } from "../../../application/auth/auth-api";
-import type { AuthSession, AuthUser } from "../../../domain/auth/session";
+import { supabase } from "../../../application/auth/supabase-client";
+import { lookupProfileByEmail } from "../../../application/auth/supabase-auth-service";
+import type { AuthUser } from "../../../domain/auth/session";
+import type { Session } from "@supabase/supabase-js";
 
 type AuthState = {
   user: AuthUser | null;
-  session: AuthSession | null;
+  session: Session | null;
   isReady: boolean;
   logout: () => void;
-  refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -18,43 +26,64 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const stored = loadSession();
-    if (!stored) {
+    // Restore session on mount
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+      if (currentSession?.user?.email) {
+        setSession(currentSession);
+        const profile = await lookupProfileByEmail(
+          currentSession.user.email,
+          currentSession.user.id,
+        );
+        if (profile) {
+          setUser(profile);
+        }
+      }
       setIsReady(true);
-      return;
-    }
+    });
 
-    setSession(stored.session);
-    me(stored.session.accessToken)
-      .then((result) => setUser(result.user))
-      .catch(() => {
-        clearSession();
+    // Subscribe to auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (currentSession?.user?.email) {
+        setSession(currentSession);
+        supabase.auth.getUser().then(async ({ data }) => {
+          if (data.user?.email) {
+            const profile = await lookupProfileByEmail(
+              data.user.email,
+              data.user.id,
+            );
+            if (profile) {
+              setUser(profile);
+            }
+          }
+        });
+      } else {
         setUser(null);
         setSession(null);
-      })
-      .finally(() => setIsReady(true));
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  async function refreshSession() {
-    if (!session) return;
-    const result = await me(session.accessToken);
-    setUser(result.user);
-  }
-
   function logout() {
-    clearSession();
-    setUser(null);
-    setSession(null);
-    router.push("/");
+    supabase.auth.signOut().then(() => {
+      setUser(null);
+      setSession(null);
+      router.push("/");
+    });
   }
 
   const value = useMemo(
-    () => ({ user, session, isReady, logout, refreshSession }),
-    [user, session, isReady]
+    () => ({ user, session, isReady, logout }),
+    [user, session, isReady],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

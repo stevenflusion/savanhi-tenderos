@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { loginUseCase } from "../../application/auth/login-use-case";
+import { validateField } from "../../domain/auth/validation";
 import type { LoginCredentials, LoginValidationErrors } from "../../domain/auth/credentials";
 
 type LoginStatus = "idle" | "submitting" | "success" | "error";
 
 const INITIAL_CREDENTIALS: LoginCredentials = {
-  email: "",
+  savanhiId: "",
   password: "",
 };
 
@@ -21,7 +22,7 @@ export function useLoginForm() {
 
   const canSubmit = useMemo(() => {
     return (
-      credentials.email.trim().length > 0 &&
+      credentials.savanhiId.trim().length > 0 &&
       credentials.password.length > 0 &&
       status !== "submitting"
     );
@@ -32,6 +33,11 @@ export function useLoginForm() {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
     if (status !== "idle") setStatus("idle");
     if (message) setMessage("");
+  }
+
+  function onBlur(field: keyof LoginCredentials) {
+    const error = validateField(field, credentials[field]);
+    setErrors((prev) => ({ ...prev, [field]: error }));
   }
 
   async function onSubmit() {
@@ -48,7 +54,7 @@ export function useLoginForm() {
     }
 
     setStatus("success");
-    setMessage(`Bienvenido, ${result.userName}. Ruta sugerida: ${result.nextRoute}`);
+    setMessage(`Bienvenido, ${result.userName}.`);
     await router.push(result.nextRoute);
   }
 
@@ -59,6 +65,7 @@ export function useLoginForm() {
     message,
     canSubmit,
     onChange,
+    onBlur,
     onSubmit,
   };
 }
