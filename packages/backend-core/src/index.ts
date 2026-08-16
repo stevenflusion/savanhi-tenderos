@@ -1,7 +1,7 @@
 export { createBackendApp } from "./app.js";
 export { createAuthRouter, createRequireAuth, createRequireRole } from "./auth/router.js";
-export { createSupabaseAuthService } from "./auth/service.js";
-export type { SupabaseAuthService } from "./auth/service.js";
+export { createAuthService } from "./auth/service.js";
+export type { AuthService } from "./auth/service.js";
 export { createBackendContext } from "./context/backend-context.js";
 export type { BackendContext, BackendRepositories } from "./context/backend-context.js";
 export { createDatabaseConnection } from "./database/connection.js";
@@ -14,24 +14,20 @@ export { createProductsRepository } from "./database/repositories/products.repos
 export { createStoresRepository } from "./database/repositories/stores.repository.js";
 export { createUsersRepository } from "./database/repositories/users.repository.js";
 export { createEnv } from "./env.js";
+export {
+  createDevelopmentOtpProvider,
+  createExternalOtpProvider,
+  OtpProviderError,
+} from "./auth/otp-provider.js";
+export type {
+  ExternalOtpProviderConfig,
+  OtpProvider,
+} from "./auth/otp-provider.js";
 export { AppError, createErrorHandler, notFoundHandler } from "./errors.js";
 export { createHealthRouter } from "./health-router.js";
 export { validateBody, validateParams, validateQuery } from "./middleware/validation.js";
+export { createMemoryRateLimiter, rateLimit } from "./middleware/rate-limit.js";
+export type { RateLimiter } from "./middleware/rate-limit.js";
 export { AUTH_ROLES, isAuthRole, normalizeRole } from "./roles.js";
-export {
-  createSupabaseAnonClient,
-  createSupabaseServiceClient,
-  createSupabaseUserClient,
-} from "./supabase/clients.js";
-export type { AppSupabaseClient } from "./supabase/clients.js";
-export {
-  mapAdminUser,
-  mapBrand,
-  mapDelivery,
-  mapOrder,
-  mapProduct,
-  mapProfile,
-  mapStore,
-} from "./supabase/mappers.js";
-export type { Database } from "./types/database.js";
+export { mapAdminUser, mapBrand, mapDelivery, mapOrder, mapProduct, mapProfile, mapStore } from "./database/mappers.js";
 export type { BackendEnv } from "./types/env.js";

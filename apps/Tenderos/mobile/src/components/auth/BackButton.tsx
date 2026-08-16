@@ -16,7 +16,11 @@ export default function BackButton({ onPress }: Props) {
   };
 
   return (
-    <Pressable onPress={handlePress} className="h-14 w-14 flex justify-center">
+    <Pressable
+      accessibilityRole="button"
+      onPress={handlePress}
+      className="h-14 w-14 flex justify-center"
+    >
       <FontAwesome6 name="chevron-left" size={24} color="#25262a" />
     </Pressable>
   );

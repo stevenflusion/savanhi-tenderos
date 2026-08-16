@@ -1,52 +1,12 @@
 import type { DeliveryStatus } from "@repo/api-contracts/deliveries";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { AppError } from "../../errors.js";
-import type { AppSupabaseClient } from "../../supabase/clients.js";
-import { mapDelivery } from "../../supabase/mappers.js";
-
-export function createDeliveriesRepository(db: AppSupabaseClient) {
-  return {
-    async listAssigned(deliveryProfileId: string) {
-      const { data, error } = await db
-        .from("deliveries")
-        .select("*")
-        .eq("delivery_user_id", deliveryProfileId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapDelivery);
-    },
-
-    async updateStatusByOrder(orderId: string, deliveryProfileId: string, status: DeliveryStatus) {
-      const { data, error } = await db
-        .from("deliveries")
-        .update({ status })
-        .eq("order_id", orderId)
-        .eq("delivery_user_id", deliveryProfileId)
-        .select()
-        .single();
-
-      if (error) throw new AppError(error.message, 404, error);
-      return mapDelivery(data);
-    },
-
-    async listToday(deliveryProfileId: string) {
-      const today = new Date().toISOString().slice(0, 10);
-      const { data, error } = await db
-        .from("deliveries")
-        .select("*")
-        .eq("delivery_user_id", deliveryProfileId)
-        .gte("created_at", `${today}T00:00:00.000Z`)
-        .lte("created_at", `${today}T23:59:59.999Z`)
-        .order("created_at", { ascending: true });
-
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapDelivery);
-    },
-
-    async count(): Promise<number> {
-      const { count, error } = await db.from("deliveries").select("id", { count: "exact", head: true });
-      if (error) throw new AppError(error.message, 502, error);
-      return count ?? 0;
-    },
-  };
-}
+import type { DatabaseConnection } from "../connection.js";
+import { deliveries } from "../schema.js";
+import { mapDelivery } from "../mappers.js";
+export function createDeliveriesRepository(db: DatabaseConnection) { return {
+  async listAssigned(id: string) { return (await db.select().from(deliveries).where(eq(deliveries.deliveryUserId, id)).orderBy(desc(deliveries.createdAt))).map(mapDelivery); },
+  async updateStatusByOrder(orderId: string, deliveryProfileId: string, status: DeliveryStatus) { const [row] = await db.update(deliveries).set({ status }).where(and(eq(deliveries.orderId, orderId), eq(deliveries.deliveryUserId, deliveryProfileId))).returning(); if (!row) throw new AppError("Delivery not found.", 404); return mapDelivery(row); },
+  async listToday(id: string) { const start = new Date(); start.setUTCHours(0, 0, 0, 0); const end = new Date(start); end.setUTCDate(end.getUTCDate() + 1); return (await db.select().from(deliveries).where(and(eq(deliveries.deliveryUserId, id), gte(deliveries.createdAt, start), lte(deliveries.createdAt, end))).orderBy(asc(deliveries.createdAt))).map(mapDelivery); },
+  async count() { const [result] = await db.select({ count: sql<number>`count(*)` }).from(deliveries); return Number(result?.count ?? 0); },
+}; }

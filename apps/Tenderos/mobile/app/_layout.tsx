@@ -1,16 +1,12 @@
 import { Stack } from "expo-router"
-import { AuthProvider } from "../src/components/AuthProvider"
 import { useFonts } from "expo-font"
 import "../global.css"
 import { useCallback, useEffect, useState } from "react"
-import { Text } from "react-native"
+
+import { AppProviders } from "@/src/providers/AppProviders"
 import SplashScreen from "../src/components/SplashScreen"
 
 const FONT_TIMEOUT_MS = 10_000
-
-// Global font: every <Text> in the app defaults to Poppins.
-// This is the standard RN pattern — fontFamily does NOT cascade from View parents.
-Text.defaultProps = { ...Text.defaultProps, style: { fontFamily: "Poppins" } }
 
 export default function RootLayout() {
   const [appReady, setAppReady] = useState(false)
@@ -46,8 +42,8 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
+    <AppProviders>
       <Stack screenOptions={{ headerShown: false }} />
-    </AuthProvider>
+    </AppProviders>
   )
 }

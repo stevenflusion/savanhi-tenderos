@@ -15,7 +15,7 @@ Replace the 2-step wizard (`complete-profile.tsx`) with 5 individual screens for
 - Remove `complete-profile.tsx` and `diseno.tsx`
 
 ### Out of Scope
-- Supabase/backend integration
+- Backend API integration
 - Secure token/session persistence
 - Google sign-in
 - Error analytics / deep linking

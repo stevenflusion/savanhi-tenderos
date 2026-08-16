@@ -4,7 +4,7 @@ import {
   useNavBarScreenOptions,
   renderNavIcon,
 } from "@/src/components/NavBar";
-import { useAuth } from "@/src/components/AuthProvider";
+import { useAuth } from "@/src/features/auth";
 
 type TabButtonArg = {
   accessibilityState?: {

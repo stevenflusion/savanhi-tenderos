@@ -1,52 +1,12 @@
 import type { StoreRequest } from "@repo/api-contracts/products";
+import { desc, eq, sql } from "drizzle-orm";
 import { AppError } from "../../errors.js";
-import type { AppSupabaseClient } from "../../supabase/clients.js";
-import { mapStore } from "../../supabase/mappers.js";
-
-export function createStoresRepository(db: AppSupabaseClient) {
-  return {
-    async listByOwner(ownerProfileId: string) {
-      const { data, error } = await db
-        .from("stores")
-        .select("*")
-        .eq("owner_user_id", ownerProfileId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapStore);
-    },
-
-    async listIdsByOwner(ownerProfileId: string): Promise<string[]> {
-      const { data, error } = await db.from("stores").select("id").eq("owner_user_id", ownerProfileId);
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map((store) => store.id);
-    },
-
-    async createForOwner(ownerProfileId: string, payload: StoreRequest) {
-      const { data, error } = await db
-        .from("stores")
-        .insert({
-          owner_user_id: ownerProfileId,
-          name: payload.name,
-          address: payload.address ?? null,
-          latitude: payload.latitude ?? null,
-          longitude: payload.longitude ?? null,
-          payment_method: payload.paymentMethod ?? null,
-          bank_account_name: payload.bankAccountName ?? null,
-          bank_account_number: payload.bankAccountNumber ?? null,
-          bank_account_type: payload.bankAccountType ?? null,
-        })
-        .select()
-        .single();
-
-      if (error) throw new AppError(error.message, 502, error);
-      return mapStore(data);
-    },
-
-    async count(): Promise<number> {
-      const { count, error } = await db.from("stores").select("id", { count: "exact", head: true });
-      if (error) throw new AppError(error.message, 502, error);
-      return count ?? 0;
-    },
-  };
-}
+import type { DatabaseConnection } from "../connection.js";
+import { stores } from "../schema.js";
+import { mapStore } from "../mappers.js";
+export function createStoresRepository(db: DatabaseConnection) { return {
+  async listByOwner(ownerProfileId: string) { return (await db.select().from(stores).where(eq(stores.ownerUserId, ownerProfileId)).orderBy(desc(stores.createdAt))).map(mapStore); },
+  async listIdsByOwner(ownerProfileId: string) { return (await db.select({ id: stores.id }).from(stores).where(eq(stores.ownerUserId, ownerProfileId))).map((row) => row.id); },
+  async createForOwner(ownerProfileId: string, payload: StoreRequest) { const [row] = await db.insert(stores).values({ ownerUserId: ownerProfileId, name: payload.name, address: payload.address ?? null, latitude: payload.latitude ?? null, longitude: payload.longitude ?? null, paymentMethod: payload.paymentMethod ?? null, bankAccountName: payload.bankAccountName ?? null, bankAccountNumber: payload.bankAccountNumber ?? null, bankAccountType: payload.bankAccountType ?? null }).returning(); if (!row) throw new AppError("Unable to create store.", 502); return mapStore(row); },
+  async count() { const [result] = await db.select({ count: sql<number>`count(*)` }).from(stores); return Number(result?.count ?? 0); },
+}; }

@@ -1,6 +1,6 @@
 # Admin-Marcas Backend (Node.js + Express)
 
-Backend dedicado para la seccion Admin-Marcas. Usa `@repo/backend-core` para compartir auth, Supabase, health checks y manejo de errores con los otros backends.
+Backend dedicado para la seccion Admin-Marcas. Usa `@repo/backend-core` para compartir auth JWT, PostgreSQL, health checks y manejo de errores con los otros backends.
 
 ## Preparacion
 
@@ -50,28 +50,22 @@ pnpm --filter admin-marcas-backend start
 
 - `src/config`: configuracion y entorno.
 - `src/routes`: rutas propias de Admin-Marcas.
-- `@repo/backend-core`: auth, Supabase, middlewares base y health checks.
+- `@repo/backend-core`: auth JWT, PostgreSQL/Drizzle, middlewares base y health checks.
 
 ## Variables requeridas
 
 Además de `NODE_ENV` y `PORT`, el backend necesita:
 
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `DATABASE_URL`
 - `AUTH_JWT_SECRET`
 - `CORS_ORIGINS`
 
-## Esquema minimo de Supabase
+## Base de datos
 
-Antes de usar el flujo completo, crea las tablas `roles` y `users` en Postgres con al menos:
+Desde la raiz, inicia PostgreSQL y aplica el esquema compartido:
 
-- `id` uuid primary key
-- `email` text unique not null
-- `full_name` text not null
-- `role` text not null
-- `active` boolean default true
-- `created_at` timestamp with time zone default now()
-- `updated_at` timestamp with time zone default now()
-
-El backend escribe en esa tabla cuando el usuario inicia sesion o se registra.
+```bash
+docker compose up -d postgres
+pnpm --filter @repo/backend-core db:migrate
+pnpm --filter @repo/backend-core db:seed
+```

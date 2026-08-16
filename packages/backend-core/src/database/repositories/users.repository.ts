@@ -1,80 +1,20 @@
 import type { AuthUser } from "@repo/api-contracts/auth";
 import type { UserStatusRequest } from "@repo/api-contracts/users";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { AppError } from "../../errors.js";
-import { mapAdminUser, mapProfile } from "../../supabase/mappers.js";
-import type { AppSupabaseClient } from "../../supabase/clients.js";
+import type { DatabaseConnection } from "../connection.js";
+import { roles, users } from "../schema.js";
+import { mapAdminUser, mapProfile } from "../mappers.js";
 
-const userSelect = "*, roles(name)";
-
-export function createUsersRepository(db: AppSupabaseClient) {
-  async function findRoleId(role: AuthUser["role"]): Promise<string> {
-    const { data, error } = await db.from("roles").select("id").eq("name", role).single();
-    if (error) throw new AppError(`Role ${role} is not configured.`, 500, error);
-    return data.id;
-  }
-
+export function createUsersRepository(db: DatabaseConnection) {
+  async function read(id: string) { const [row] = await db.select({ user: users, roleName: roles.name }).from(users).innerJoin(roles, eq(users.roleId, roles.id)).where(eq(users.id, id)); return row ? { ...row.user, roleName: row.roleName } : null; }
   return {
-    async ensure(user: AuthUser): Promise<AuthUser> {
-      const roleId = await findRoleId(user.role);
-      const { data, error } = await db
-        .from("users")
-        .upsert(
-          {
-            id: user.id,
-            role_id: roleId,
-            email: user.email,
-            full_name: user.fullName,
-            active: user.active,
-          },
-          { onConflict: "id" }
-        )
-        .select(userSelect)
-        .single();
-
-      if (error) throw new AppError(error.message, 502, error);
-      return mapProfile(data);
-    },
-
-    async findById(id: string): Promise<AuthUser | null> {
-      const { data, error } = await db.from("users").select(userSelect).eq("id", id).single();
-      if (error) return null;
-      return mapProfile(data);
-    },
-
-    async listAdminUsers() {
-      const { data, error } = await db.from("users").select(userSelect).order("created_at", { ascending: false });
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapAdminUser);
-    },
-
-    async updateProfile(id: string, payload: { fullName: string }): Promise<AuthUser> {
-      const { data, error } = await db
-        .from("users")
-        .update({ full_name: payload.fullName })
-        .eq("id", id)
-        .select(userSelect)
-        .single();
-
-      if (error) throw new AppError(error.message, 404, error);
-      return mapProfile(data);
-    },
-
-    async updateStatus(id: string, payload: UserStatusRequest) {
-      const { data, error } = await db
-        .from("users")
-        .update({ active: payload.active })
-        .eq("id", id)
-        .select(userSelect)
-        .single();
-
-      if (error) throw new AppError(error.message, 404, error);
-      return mapAdminUser(data);
-    },
-
-    async count(): Promise<number> {
-      const { count, error } = await db.from("users").select("id", { count: "exact", head: true });
-      if (error) throw new AppError(error.message, 502, error);
-      return count ?? 0;
-    },
+    async ensure(user: AuthUser) { const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.name, user.role)); if (!role) throw new AppError(`Role ${user.role} is not configured.`, 500); const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.id, user.id)); if (existing) await db.update(users).set({ roleId: role.id, email: user.email, emailNormalized: user.email.toLowerCase(), fullName: user.fullName, active: user.active, updatedAt: new Date() }).where(eq(users.id, user.id)); else await db.insert(users).values({ id: user.id, roleId: role.id, email: user.email, emailNormalized: user.email.toLowerCase(), fullName: user.fullName, active: user.active, passwordHash: "!managed-by-auth-service!" }); const row = await read(user.id); if (!row) throw new AppError("Unable to persist user profile.", 502); return mapProfile(row); },
+    async findById(id: string) { const row = await read(id); return row ? mapProfile(row) : null; },
+    async findByEmail(email: string) { const [row] = await db.select({ user: users, roleName: roles.name }).from(users).innerJoin(roles, eq(users.roleId, roles.id)).where(eq(users.email, email.toLowerCase())); return row ? mapProfile({ ...row.user, roleName: row.roleName }) : null; },
+    async listAdminUsers() { const rows = await db.select({ user: users, roleName: roles.name }).from(users).innerJoin(roles, eq(users.roleId, roles.id)).orderBy(desc(users.createdAt)); return rows.map((row) => mapAdminUser({ ...row.user, roleName: row.roleName })); },
+    async updateProfile(id: string, payload: { fullName: string }) { await db.update(users).set({ fullName: payload.fullName, updatedAt: new Date() }).where(eq(users.id, id)); const row = await read(id); if (!row) throw new AppError("User not found.", 404); return mapProfile(row); },
+    async updateStatus(id: string, payload: UserStatusRequest) { await db.update(users).set({ active: payload.active, updatedAt: new Date() }).where(eq(users.id, id)); const row = await read(id); if (!row) throw new AppError("User not found.", 404); return mapAdminUser(row); },
+    async count() { const [result] = await db.select({ count: sql<number>`count(*)` }).from(users); return Number(result?.count ?? 0); },
   };
 }

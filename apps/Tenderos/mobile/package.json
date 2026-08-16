@@ -3,10 +3,12 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "expo start --offline --port 8082",
+    "dev": "expo start --dev-client --lan --port 8082 --clear",
     "android": "expo start --offline --port 8082 --android",
     "ios": "expo start --offline --port 8082 --ios",
-    "web": "expo start --offline --port 8082 --web"
+    "web": "expo start --offline --port 8082 --web",
+    "test": "jest --runInBand",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -38,9 +40,13 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^29.5.14",
     "@repo/tailwind-config": "workspace:*",
     "@types/react": "^19.1.17",
     "dotenv": "^16.6.1",
+    "jest": "^29.7.0",
+    "jest-expo": "~54.0.16",
     "tailwindcss": "^3.4.17",
     "typescript": "5.9.2"
   }

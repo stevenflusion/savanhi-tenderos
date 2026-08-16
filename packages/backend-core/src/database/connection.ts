@@ -1,21 +1,15 @@
-import {
-  createSupabaseAnonClient,
-  createSupabaseServiceClient,
-  createSupabaseUserClient,
-  type AppSupabaseClient,
-} from "../supabase/clients.js";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import pg from "pg";
+import { schema } from "./schema.js";
 import type { BackendEnv } from "../types/env.js";
 
-export type DatabaseConnection = {
-  anon: AppSupabaseClient;
-  service: AppSupabaseClient;
-  forUser: (accessToken: string) => AppSupabaseClient;
+export type DatabaseConnection = NodePgDatabase<typeof schema> & {
+  pool: pg.Pool;
 };
 
 export function createDatabaseConnection(env: BackendEnv): DatabaseConnection {
-  return {
-    anon: createSupabaseAnonClient(env),
-    service: createSupabaseServiceClient(env),
-    forUser: (accessToken) => createSupabaseUserClient(env, accessToken),
-  };
+  const pool = new pg.Pool({ connectionString: env.databaseUrl });
+  return Object.assign(drizzle(pool, { schema }), {
+    pool,
+  }) as DatabaseConnection;
 }

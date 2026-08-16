@@ -5,6 +5,8 @@ import morgan from "morgan";
 import { createErrorHandler, notFoundHandler } from "./errors.js";
 import { createHealthRouter } from "./health-router.js";
 import type { BackendEnv } from "./types/env.js";
+import { requestContext } from "./middleware/request-context.js";
+import { createMemoryRateLimiter, rateLimit } from "./middleware/rate-limit.js";
 
 function buildCorsOptions(env: BackendEnv): cors.CorsOptions | undefined {
   if (!env.allowedOrigins.length) return undefined;
@@ -21,12 +23,21 @@ function buildCorsOptions(env: BackendEnv): cors.CorsOptions | undefined {
   };
 }
 
-export function createBackendApp({ env, routers = [] }: { env: BackendEnv; routers?: Router[] }): Express {
+export function createBackendApp({
+  env,
+  routers = [],
+}: {
+  env: BackendEnv;
+  routers?: Router[];
+}): Express {
   const app = express();
+  app.set("trust proxy", env.trustProxy);
 
   app.use(helmet());
   app.use(cors(buildCorsOptions(env)));
-  app.use(express.json());
+  app.use(requestContext);
+  app.use(express.json({ limit: "100kb" }));
+  app.use(rateLimit(createMemoryRateLimiter(), "api", env.rateLimits.api));
   app.use(morgan("dev"));
 
   app.use(createHealthRouter(env));

@@ -1,4 +1,9 @@
-import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import type {
+  ErrorRequestHandler,
+  NextFunction,
+  Request,
+  Response,
+} from "express";
 import { ZodError } from "zod";
 import type { BackendEnv } from "./types/env.js";
 
@@ -14,7 +19,11 @@ export class AppError extends Error {
   }
 }
 
-export function notFoundHandler(req: Request, _res: Response, next: NextFunction) {
+export function notFoundHandler(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
   next(new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404));
 }
 
@@ -28,8 +37,13 @@ export function createErrorHandler(env: BackendEnv): ErrorRequestHandler {
       return;
     }
 
-    const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
-    const message = statusCode === 500 ? "Internal server error" : error.message;
+    const statusCode = Number.isInteger(error?.statusCode)
+      ? error.statusCode
+      : 500;
+    if (statusCode === 429 && error?.details?.retryAfterSeconds)
+      res.setHeader("Retry-After", String(error.details.retryAfterSeconds));
+    const message =
+      statusCode === 500 ? "Internal server error" : error.message;
     const payload: { error: string; details?: unknown } = { error: message };
 
     if (statusCode !== 500 && error?.details !== undefined) {

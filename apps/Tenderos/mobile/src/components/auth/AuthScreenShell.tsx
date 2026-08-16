@@ -17,13 +17,12 @@ const ROUTE_TO_STEP: Record<string, number> = {
   "store-name": 2,
   "business-location": 3,
   "store-photos": 4,
-  "payment-method": 5,
 };
 
 export default function AuthScreenShell({
   children,
   currentStep,
-  totalSteps = 6,
+  totalSteps = 4,
   headerCenter,
 }: Props) {
   const pathname = usePathname();

@@ -41,20 +41,34 @@ function readRequiredEnv(name: string): string {
   return value;
 }
 
-function readRequiredEnvAlias(primaryName: string, fallbackName: string): string {
-  const value = process.env[primaryName] ?? process.env[fallbackName];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${primaryName} or ${fallbackName}`);
-  }
-  return value;
-}
-
 function parseOrigins(rawOrigins: string | undefined): string[] {
   if (!rawOrigins) return [];
   return rawOrigins
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+function parseLimit(raw: string | undefined, fallback: number): number {
+  const value = Number(raw ?? fallback);
+  if (!Number.isInteger(value) || value <= 0)
+    throw new Error("Rate limits must be positive integers.");
+  return value;
+}
+
+function parseBoolean(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined) return fallback;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  throw new Error("Expected a boolean environment value.");
+}
+
+function parseTimeout(raw: string | undefined, fallback: number): number {
+  const value = Number(raw ?? fallback);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error("OTP provider timeout must be a positive integer.");
+  }
+  return value;
 }
 
 export function createEnv({
@@ -64,14 +78,44 @@ export function createEnv({
   serviceName: string;
   defaultPort: number;
 }): BackendEnv {
+  const rawOtpProvider = process.env.OTP_PROVIDER ?? "development";
+  if (rawOtpProvider !== "development" && rawOtpProvider !== "external") {
+    throw new Error("OTP_PROVIDER must be either development or external.");
+  }
+  const otpProvider = rawOtpProvider;
+  const otpExternal =
+    otpProvider === "external"
+      ? {
+          url: readRequiredEnv("OTP_EXTERNAL_URL"),
+          apiKey: readRequiredEnv("OTP_EXTERNAL_API_KEY"),
+          from: readRequiredEnv("OTP_EXTERNAL_FROM"),
+          timeoutMs: parseTimeout(process.env.OTP_EXTERNAL_TIMEOUT_MS, 5000),
+        }
+      : undefined;
+
   return {
     serviceName,
     nodeEnv: process.env.NODE_ENV ?? "development",
     port: parsePort(process.env.PORT, defaultPort),
     allowedOrigins: parseOrigins(process.env.CORS_ORIGINS),
-    supabaseUrl: readRequiredEnv("SUPABASE_URL"),
-    supabaseAnonKey: readRequiredEnvAlias("SUPABASE_ANON_KEY", "SUPABASE_PUBLISHABLE_KEY"),
-    supabaseServiceRoleKey: readRequiredEnvAlias("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"),
+    databaseUrl: readRequiredEnv("DATABASE_URL"),
     authJwtSecret: readRequiredEnv("AUTH_JWT_SECRET"),
+    authJwtIssuer: process.env.AUTH_JWT_ISSUER ?? serviceName,
+    authJwtAudience: process.env.AUTH_JWT_AUDIENCE ?? "savanhi-api",
+    trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
+    otpProvider,
+    otpExternal,
+    otpDevCode:
+      process.env.NODE_ENV === "production"
+        ? undefined
+        : process.env.OTP_DEV_CODE,
+    rateLimits: {
+      api: parseLimit(process.env.RATE_LIMIT_API, 120),
+      login: parseLimit(process.env.RATE_LIMIT_LOGIN, 10),
+      register: parseLimit(process.env.RATE_LIMIT_REGISTER, 5),
+      otpRequest: parseLimit(process.env.RATE_LIMIT_OTP_REQUEST, 5),
+      otpVerify: parseLimit(process.env.RATE_LIMIT_OTP_VERIFY, 10),
+      refresh: parseLimit(process.env.RATE_LIMIT_REFRESH, 30),
+    },
   };
 }

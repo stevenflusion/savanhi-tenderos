@@ -17,50 +17,10 @@ async function main() {
   const context = createBackendContext(env, { defaultRegistrationRole: "admin" });
   const normalizedEmail = email.toLowerCase();
 
-  const { data: authUsers, error: listError } = await context.db.service.auth.admin.listUsers();
-  if (listError) {
-    throw new Error(`Unable to list Supabase users: ${listError.message}`);
-  }
-
-  const existingAuthUser = authUsers.users.find((user) => user.email?.toLowerCase() === normalizedEmail) ?? null;
-  let userId = existingAuthUser?.id ?? null;
-
-  if (!existingAuthUser) {
-    const { data, error } = await context.db.service.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-        role: "admin",
-      },
-    });
-
-    if (error) {
-      throw new Error(`Unable to create Supabase auth user: ${error.message}`);
-    }
-
-    if (!data.user) {
-      throw new Error("Supabase did not return a user after creation.");
-    }
-
-    userId = data.user.id;
-    console.log(`Created auth user ${email} (${userId}).`);
-  } else {
-    console.log(`Auth user already exists: ${email} (${existingAuthUser.id}).`);
-  }
-
-  if (!userId) {
-    throw new Error("Unable to resolve the admin user id.");
-  }
-
-  const profile = await context.repositories.users.ensure({
-    id: userId,
-    email,
-    fullName,
-    role: "admin",
-    active: true,
-  });
+  const existing = await context.repositories.users.findByEmail(normalizedEmail);
+  if (existing) throw new Error(`An admin profile already exists for ${email}.`);
+  const result = await context.authService.signUpWithPassword({ email, password, fullName, role: "admin" });
+  const profile = result.user;
 
   console.log(
     JSON.stringify(

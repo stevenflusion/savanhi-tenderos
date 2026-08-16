@@ -1,5 +1,8 @@
-import { createSupabaseAuthService } from "../auth/service.js";
-import { createDatabaseConnection, type DatabaseConnection } from "../database/connection.js";
+import { createAuthService } from "../auth/service.js";
+import {
+  createDatabaseConnection,
+  type DatabaseConnection,
+} from "../database/connection.js";
 import { createAuthLogsRepository } from "../database/repositories/auth-logs.repository.js";
 import { createBrandsRepository } from "../database/repositories/brands.repository.js";
 import { createDeliveriesRepository } from "../database/repositories/deliveries.repository.js";
@@ -23,32 +26,33 @@ export type BackendRepositories = {
 export type BackendContext = {
   env: BackendEnv;
   db: DatabaseConnection;
-  authService: ReturnType<typeof createSupabaseAuthService>;
+  authService: ReturnType<typeof createAuthService>;
   repositories: BackendRepositories;
 };
 
 export function createBackendContext(
   env: BackendEnv,
-  { defaultRegistrationRole = "tendero" as AuthRole } = {}
+  { defaultRegistrationRole = "tendero" as AuthRole } = {},
 ): BackendContext {
   const db = createDatabaseConnection(env);
   const repositories = {
-    authLogs: createAuthLogsRepository(db.service),
-    users: createUsersRepository(db.service),
-    brands: createBrandsRepository(db.service),
-    stores: createStoresRepository(db.service),
-    products: createProductsRepository(db.service),
-    orders: createOrdersRepository(db.service),
-    deliveries: createDeliveriesRepository(db.service),
+    authLogs: createAuthLogsRepository(db),
+    users: createUsersRepository(db),
+    brands: createBrandsRepository(db),
+    stores: createStoresRepository(db),
+    products: createProductsRepository(db),
+    orders: createOrdersRepository(db),
+    deliveries: createDeliveriesRepository(db),
   };
 
   return {
     env,
     db,
-    authService: createSupabaseAuthService(db, {
+    authService: createAuthService(db, {
+      env,
       defaultRegistrationRole,
       authLogs: repositories.authLogs,
-      users: repositories.users,
+       users: repositories.users,
     }),
     repositories,
   };

@@ -1,103 +1,16 @@
 import type { ProductRequest } from "@repo/api-contracts/products";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { AppError } from "../../errors.js";
-import type { AppSupabaseClient } from "../../supabase/clients.js";
-import { mapProduct } from "../../supabase/mappers.js";
-
-export function createProductsRepository(db: AppSupabaseClient) {
-  return {
-    async listActive() {
-      const { data, error } = await db
-        .from("products")
-        .select("*")
-        .eq("active", true)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapProduct);
-    },
-
-    async findActiveById(id: string) {
-      const { data, error } = await db.from("products").select("*").eq("id", id).eq("active", true).single();
-      if (error) throw new AppError(error.message, 404, error);
-      return mapProduct(data);
-    },
-
-    async listRowsByIds(productIds: string[]) {
-      const { data, error } = await db.from("products").select("*").in("id", productIds).eq("active", true);
-      if (error) throw new AppError(error.message, 502, error);
-      return data;
-    },
-
-    async listByStoreIds(storeIds: string[]) {
-      if (!storeIds.length) return [];
-
-      const { data, error } = await db
-        .from("products")
-        .select("*")
-        .in("store_id", storeIds)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new AppError(error.message, 502, error);
-      return data.map(mapProduct);
-    },
-
-    async createForStore(storeId: string, payload: ProductRequest) {
-      const { data, error } = await db
-        .from("products")
-        .insert({
-          store_id: storeId,
-          brand_id: payload.brandId ?? null,
-          name: payload.name,
-          description: payload.description ?? null,
-          price: payload.price,
-          stock: payload.stock ?? 0,
-          active: payload.active ?? true,
-        })
-        .select()
-        .single();
-
-      if (error) throw new AppError(error.message, 502, error);
-      return mapProduct(data);
-    },
-
-    async updateForStores(id: string, storeIds: string[], payload: Partial<ProductRequest>) {
-      const { data, error } = await db
-        .from("products")
-        .update({
-          store_id: payload.storeId,
-          brand_id: payload.brandId,
-          name: payload.name,
-          description: payload.description,
-          price: payload.price,
-          stock: payload.stock,
-          active: payload.active,
-        })
-        .eq("id", id)
-        .in("store_id", storeIds)
-        .select()
-        .single();
-
-      if (error) throw new AppError(error.message, 404, error);
-      return mapProduct(data);
-    },
-
-    async deactivateForStores(id: string, storeIds: string[]) {
-      const { data, error } = await db
-        .from("products")
-        .update({ active: false })
-        .eq("id", id)
-        .in("store_id", storeIds)
-        .select()
-        .single();
-
-      if (error) throw new AppError(error.message, 404, error);
-      return mapProduct(data);
-    },
-
-    async count(): Promise<number> {
-      const { count, error } = await db.from("products").select("id", { count: "exact", head: true });
-      if (error) throw new AppError(error.message, 502, error);
-      return count ?? 0;
-    },
-  };
-}
+import type { DatabaseConnection } from "../connection.js";
+import { products } from "../schema.js";
+import { mapProduct } from "../mappers.js";
+export function createProductsRepository(db: DatabaseConnection) { return {
+  async listActive() { return (await db.select().from(products).where(eq(products.active, true)).orderBy(desc(products.createdAt))).map(mapProduct); },
+  async findActiveById(id: string) { const [row] = await db.select().from(products).where(and(eq(products.id, id), eq(products.active, true))); if (!row) throw new AppError("Product not found.", 404); return mapProduct(row); },
+  async listRowsByIds(ids: string[]) { return db.select().from(products).where(and(inArray(products.id, ids), eq(products.active, true))); },
+  async listByStoreIds(ids: string[]) { if (!ids.length) return []; return (await db.select().from(products).where(inArray(products.storeId, ids)).orderBy(desc(products.createdAt))).map(mapProduct); },
+  async createForStore(storeId: string, payload: ProductRequest) { const [row] = await db.insert(products).values({ storeId, brandId: payload.brandId ?? null, name: payload.name, description: payload.description ?? null, price: String(payload.price), stock: payload.stock ?? 0, active: payload.active ?? true }).returning(); if (!row) throw new AppError("Unable to create product.", 502); return mapProduct(row); },
+  async updateForStores(id: string, storeIds: string[], payload: Partial<ProductRequest>) { const [row] = await db.update(products).set({ storeId: payload.storeId, brandId: payload.brandId, name: payload.name, description: payload.description, price: payload.price === undefined ? undefined : String(payload.price), stock: payload.stock, active: payload.active }).where(and(eq(products.id, id), inArray(products.storeId, storeIds))).returning(); if (!row) throw new AppError("Product not found.", 404); return mapProduct(row); },
+  async deactivateForStores(id: string, storeIds: string[]) { const [row] = await db.update(products).set({ active: false }).where(and(eq(products.id, id), inArray(products.storeId, storeIds))).returning(); if (!row) throw new AppError("Product not found.", 404); return mapProduct(row); },
+  async count() { const [result] = await db.select({ count: sql<number>`count(*)` }).from(products); return Number(result?.count ?? 0); },
+}; }

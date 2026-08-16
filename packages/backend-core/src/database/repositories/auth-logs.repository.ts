@@ -1,23 +1,21 @@
-import type { AppSupabaseClient } from "../../supabase/clients.js";
+import type { DatabaseConnection } from "../connection.js";
+import { authEvents } from "../schema.js";
 
-export function createAuthLogsRepository(db: AppSupabaseClient) {
-  return {
-    async recordRegister(event: { userId: string; email: string }): Promise<void> {
-      const { error } = await db.from("register").insert({
-        user_id: event.userId,
-        email: event.email,
+import crypto from "node:crypto";
+
+export type AuthEvent = { eventType: string; userId?: string; sessionId?: string; familyId?: string; email?: string; outcome: "success" | "failure"; reason?: string; requestId?: string; ip?: string; userAgent?: string };
+
+export function createAuthLogsRepository(db: DatabaseConnection) {
+  async function record(event: AuthEvent) {
+    try {
+      const { email, ...redactedEvent } = event;
+      await db.insert(authEvents).values({
+        ...redactedEvent,
+        emailHash: email
+          ? crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex")
+          : null,
       });
-
-      if (error) console.warn("Unable to record register event.", error.message);
-    },
-
-    async recordLogin(event: { userId: string; email: string }): Promise<void> {
-      const { error } = await db.from("login").insert({
-        user_id: event.userId,
-        email: event.email,
-      });
-
-      if (error) console.warn("Unable to record login event.", error.message);
-    },
-  };
+    } catch { /* Audit failure must not break authentication. */ }
+  }
+  return { record };
 }

@@ -1,0 +1,216 @@
+import {
+  boolean,
+  doublePrecision,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+
+export const roles = pgTable("roles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const users = pgTable("users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  roleId: uuid("role_id")
+    .references(() => roles.id)
+    .notNull(),
+  email: text("email").notNull().unique(),
+  emailNormalized: text("email_normalized").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  fullName: text("full_name").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    refreshTokenHash: text("refresh_token_hash").unique(),
+    familyId: uuid("family_id").notNull(),
+    rotation: integer("rotation").default(0).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIndex: index("auth_sessions_user_idx").on(table.userId),
+    familyIndex: index("auth_sessions_family_idx").on(table.familyId),
+    expiryIndex: index("auth_sessions_expiry_idx").on(table.expiresAt),
+  }),
+);
+
+export const otpChallenges = pgTable(
+  "otp_challenges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    emailNormalized: text("email_normalized").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    emailIndex: index("otp_challenges_email_idx").on(table.emailNormalized),
+    expiryIndex: index("otp_challenges_expiry_idx").on(table.expiresAt),
+  }),
+);
+
+export const authEvents = pgTable(
+  "auth_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventType: text("event_type").notNull(),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    sessionId: uuid("session_id").references(() => authSessions.id, {
+      onDelete: "set null",
+    }),
+    familyId: uuid("family_id"),
+    emailHash: text("email_hash"),
+    outcome: text("outcome").notNull(),
+    reason: text("reason"),
+    requestId: text("request_id"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    typeIndex: index("auth_events_type_idx").on(table.eventType),
+    userIndex: index("auth_events_user_idx").on(table.userId),
+    createdIndex: index("auth_events_created_idx").on(table.createdAt),
+  }),
+);
+
+export const register = pgTable("register", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const login = pgTable("login", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const brands = pgTable("brands", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  ownerUserId: uuid("owner_user_id").references(() => users.id),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const stores = pgTable("stores", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerUserId: uuid("owner_user_id")
+    .references(() => users.id)
+    .notNull(),
+  name: text("name").notNull(),
+  address: text("address"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  paymentMethod: text("payment_method"),
+  bankAccountName: text("bank_account_name"),
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountType: text("bank_account_type"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  storeId: uuid("store_id").references(() => stores.id),
+  brandId: uuid("brand_id").references(() => brands.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+  stock: integer("stock").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const orders = pgTable("orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  clientUserId: uuid("client_user_id").references(() => users.id),
+  storeId: uuid("store_id").references(() => stores.id),
+  status: text("status").default("pending").notNull(),
+  total: numeric("total", { precision: 12, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+export const orderItems = pgTable("order_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id")
+    .references(() => orders.id, { onDelete: "cascade" })
+    .notNull(),
+  productId: uuid("product_id").references(() => products.id),
+  quantity: integer("quantity").notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
+});
+export const deliveries = pgTable("deliveries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: uuid("order_id").references(() => orders.id),
+  deliveryUserId: uuid("delivery_user_id").references(() => users.id),
+  status: text("status").default("assigned").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const schema = {
+  roles,
+  users,
+  authSessions,
+  otpChallenges,
+  authEvents,
+  register,
+  login,
+  brands,
+  stores,
+  products,
+  orders,
+  orderItems,
+  deliveries,
+};
