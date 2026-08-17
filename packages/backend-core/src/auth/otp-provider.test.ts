@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createExternalOtpProvider, OtpProviderError } from "./otp-provider.js";
+import { createResendOtpProvider, OtpProviderError } from "./otp-provider.js";
 
-test("external OTP adapter sends the Resend email request without logging", async () => {
+test("Resend OTP adapter sends the email request without logging", async () => {
   let request: RequestInit | undefined;
-  const provider = createExternalOtpProvider({
-    url: "https://provider.test/send",
+  const provider = createResendOtpProvider({
     apiKey: "secret",
     from: "noreply@example.test",
     timeoutMs: 100,
@@ -19,16 +18,15 @@ test("external OTP adapter sends the Resend email request without logging", asyn
   assert.equal(request?.headers && new Headers(request.headers).get("authorization"), "Bearer secret");
   assert.deepEqual(JSON.parse(String(request?.body)), {
     from: "noreply@example.test",
-    to: "person@example.test",
-    subject: "Your Savanhi verification code",
-    html: "<p>Your Savanhi verification code is <strong>123456</strong>.</p>",
-    text: "Your Savanhi verification code is 123456.",
+    to: ["person@example.test"],
+    subject: "Tu código de verificación de Savanhi",
+    html: "<p>Tu código de verificación de Savanhi es <strong>123456</strong>.</p>",
+    text: "Tu código de verificación de Savanhi es 123456.",
   });
 });
 
-test("external OTP adapter maps timeout and upstream failures", async () => {
-  const timeoutProvider = createExternalOtpProvider({
-    url: "https://provider.test/send",
+test("Resend OTP adapter maps timeout and upstream failures", async () => {
+  const timeoutProvider = createResendOtpProvider({
     apiKey: "secret",
     from: "noreply@example.test",
     timeoutMs: 1,
@@ -36,8 +34,7 @@ test("external OTP adapter maps timeout and upstream failures", async () => {
   });
   await assert.rejects(() => timeoutProvider.sendOtp("a@example.test", "123456"), (error: unknown) => error instanceof OtpProviderError && error.kind === "timeout");
 
-  const upstreamProvider = createExternalOtpProvider({
-    url: "https://provider.test/send",
+  const upstreamProvider = createResendOtpProvider({
     apiKey: "secret",
     from: "noreply@example.test",
     timeoutMs: 100,

@@ -102,16 +102,20 @@ export function createAuthFetchRepository(): AuthRemoteRepository {
         });
 
         if (!response.ok) {
-          const data = await parseJson(response);
+          const data = await response.json().catch(() => ({}));
           return {
             success: false,
-            error: data.error ?? "No se pudo enviar el código.",
+            error: data.error ?? "No pudimos enviar el código. Probá de nuevo.",
           };
         }
 
         return { success: true };
       } catch {
-        return { success: false, error: "No se pudo conectar con el servidor." };
+        return {
+          success: false,
+          error:
+            "No pudimos comunicarnos con la app. Revisá que el servidor esté encendido y que el celular esté en la misma red Wi-Fi.",
+        };
       }
     },
 

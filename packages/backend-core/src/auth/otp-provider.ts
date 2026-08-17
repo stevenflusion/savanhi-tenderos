@@ -2,8 +2,7 @@ export type OtpProvider = {
   sendOtp(email: string, code: string): Promise<void>;
 };
 
-export type ExternalOtpProviderConfig = {
-  url: string;
+export type ResendOtpProviderConfig = {
   apiKey: string;
   from: string;
   timeoutMs: number;
@@ -29,14 +28,14 @@ export function createDevelopmentOtpProvider(): OtpProvider {
   };
 }
 
-export function createExternalOtpProvider(
-  config: ExternalOtpProviderConfig,
+export function createResendOtpProvider(
+  config: ResendOtpProviderConfig,
 ): OtpProvider {
   return {
     async sendOtp(email, code) {
-      if (!config.url || !config.apiKey || !config.from || config.timeoutMs <= 0) {
+      if (!config.apiKey || !config.from || config.timeoutMs <= 0) {
         throw new OtpProviderError(
-          "External OTP provider configuration is incomplete.",
+          "La configuración de Resend está incompleta.",
           "configuration",
         );
       }
@@ -45,7 +44,7 @@ export function createExternalOtpProvider(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
       try {
-        const response = await fetchImpl(config.url, {
+        const response = await fetchImpl("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             authorization: `Bearer ${config.apiKey}`,
@@ -53,16 +52,16 @@ export function createExternalOtpProvider(
           },
           body: JSON.stringify({
             from: config.from,
-            to: email,
-            subject: "Your Savanhi verification code",
-            html: `<p>Your Savanhi verification code is <strong>${code}</strong>.</p>`,
-            text: `Your Savanhi verification code is ${code}.`,
+            to: [email],
+            subject: "Tu código de verificación de Savanhi",
+            html: `<p>Tu código de verificación de Savanhi es <strong>${code}</strong>.</p>`,
+            text: `Tu código de verificación de Savanhi es ${code}.`,
           }),
           signal: controller.signal,
         });
         if (!response.ok) {
           throw new OtpProviderError(
-            "External OTP provider rejected the request.",
+            "Resend rechazó el envío del correo.",
             "upstream",
             response.status,
           );
@@ -74,12 +73,12 @@ export function createExternalOtpProvider(
           error.name === "AbortError"
         ) {
           throw new OtpProviderError(
-            "External OTP provider timed out.",
+            "Resend tardó demasiado en responder.",
             "timeout",
           );
         }
         throw new OtpProviderError(
-          "External OTP provider could not be reached.",
+          "No se pudo conectar con Resend.",
           "network",
         );
       } finally {

@@ -8,10 +8,9 @@ export type BackendEnv = {
   authJwtIssuer: string;
   authJwtAudience: string;
   trustProxy: boolean;
-  otpProvider: "development" | "external";
+  otpProvider: "development" | "resend";
   otpDevCode?: string;
-  otpExternal?: {
-    url: string;
+  otpResend?: {
     apiKey: string;
     from: string;
     timeoutMs: number;

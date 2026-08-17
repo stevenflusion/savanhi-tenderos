@@ -23,7 +23,7 @@ import type { createUsersRepository } from "../database/repositories/users.repos
 import type { BackendEnv } from "../types/env.js";
 import {
   createDevelopmentOtpProvider,
-  createExternalOtpProvider,
+  createResendOtpProvider,
   type OtpProvider,
 } from "./otp-provider.js";
 
@@ -72,8 +72,8 @@ export function createAuthService(
 ) {
   const provider =
     otpProvider ??
-    (env.otpProvider === "external"
-      ? createExternalOtpProvider(env.otpExternal!)
+    (env.otpProvider === "resend"
+      ? createResendOtpProvider(env.otpResend!)
       : createDevelopmentOtpProvider());
   async function roleId(role: AuthRole) {
     const [row] = await db
@@ -239,7 +239,10 @@ export function createAuthService(
           reason: "provider_unavailable",
           ...meta,
         });
-        throw new AppError("Unable to send verification code.", 503);
+        throw new AppError(
+          "No pudimos enviar el código. Revisá el correo del remitente y la configuración de Resend.",
+          503,
+        );
       }
     },
     async verifyOtp(

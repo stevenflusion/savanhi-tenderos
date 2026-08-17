@@ -16,11 +16,11 @@ export { createUsersRepository } from "./database/repositories/users.repository.
 export { createEnv } from "./env.js";
 export {
   createDevelopmentOtpProvider,
-  createExternalOtpProvider,
+  createResendOtpProvider,
   OtpProviderError,
 } from "./auth/otp-provider.js";
 export type {
-  ExternalOtpProviderConfig,
+  ResendOtpProviderConfig,
   OtpProvider,
 } from "./auth/otp-provider.js";
 export { AppError, createErrorHandler, notFoundHandler } from "./errors.js";

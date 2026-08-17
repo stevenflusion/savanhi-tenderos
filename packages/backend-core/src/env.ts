@@ -79,17 +79,16 @@ export function createEnv({
   defaultPort: number;
 }): BackendEnv {
   const rawOtpProvider = process.env.OTP_PROVIDER ?? "development";
-  if (rawOtpProvider !== "development" && rawOtpProvider !== "external") {
-    throw new Error("OTP_PROVIDER must be either development or external.");
+  if (rawOtpProvider !== "development" && rawOtpProvider !== "resend") {
+    throw new Error("OTP_PROVIDER must be either development or resend.");
   }
   const otpProvider = rawOtpProvider;
-  const otpExternal =
-    otpProvider === "external"
+  const otpResend =
+    otpProvider === "resend"
       ? {
-          url: readRequiredEnv("OTP_EXTERNAL_URL"),
-          apiKey: readRequiredEnv("OTP_EXTERNAL_API_KEY"),
-          from: readRequiredEnv("OTP_EXTERNAL_FROM"),
-          timeoutMs: parseTimeout(process.env.OTP_EXTERNAL_TIMEOUT_MS, 5000),
+          apiKey: readRequiredEnv("RESEND_API_KEY"),
+          from: readRequiredEnv("RESEND_FROM"),
+          timeoutMs: parseTimeout(process.env.RESEND_TIMEOUT_MS, 5000),
         }
       : undefined;
 
@@ -104,7 +103,7 @@ export function createEnv({
     authJwtAudience: process.env.AUTH_JWT_AUDIENCE ?? "savanhi-api",
     trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
     otpProvider,
-    otpExternal,
+    otpResend,
     otpDevCode:
       process.env.NODE_ENV === "production"
         ? undefined
