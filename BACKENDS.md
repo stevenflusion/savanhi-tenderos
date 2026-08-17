@@ -16,14 +16,13 @@ The database is PostgreSQL 16 with a persistent Compose volume and a healthcheck
 
 ## OTP email provider
 
-Development uses `OTP_PROVIDER=development` and never logs the generated OTP. `OTP_DEV_CODE` may be set only outside production for deterministic local testing. Production must use `OTP_PROVIDER=external`; startup validation then requires:
+Development uses `OTP_PROVIDER=development` and never logs the generated OTP. `OTP_DEV_CODE` may be set only outside production for deterministic local testing. Production must use `OTP_PROVIDER=resend`; startup validation then requires:
 
-- `OTP_EXTERNAL_URL`: provider HTTP endpoint accepting `POST` JSON `{ "to": "email", "code": "123456", "from": "sender" }`.
-- `OTP_EXTERNAL_API_KEY`: bearer credential sent in the `Authorization` header.
-- `OTP_EXTERNAL_FROM`: verified sender value forwarded as `from`.
-- `OTP_EXTERNAL_TIMEOUT_MS`: positive timeout in milliseconds; defaults to `5000`.
+- `RESEND_API_KEY`: API key de Resend, enviada como credencial Bearer.
+- `RESEND_FROM`: remitente verificado en Resend, por ejemplo `Savanhi <no-reply@tudominio.com>`.
+- `RESEND_TIMEOUT_MS`: timeout positivo en milisegundos; por defecto `5000`.
 
-The adapter uses native `fetch`, aborts timed-out requests, and maps timeout, network, upstream, and configuration failures to typed `OtpProviderError` values. No provider is bundled or assumed; configure a provider matching this contract before enabling `external`.
+El adaptador usa `fetch` nativo contra `https://api.resend.com/emails`, cancela solicitudes vencidas y traduce fallos de red, timeout, proveedor y configuración a errores tipados. Nunca expone la API key ni registra códigos OTP.
 
 ## Rate limiting
 
